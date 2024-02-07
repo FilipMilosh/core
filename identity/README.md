@@ -1,5 +1,40 @@
 # IDENTITY
 
+
+Functions
+createIdentity();
+- public_key
+- private_key
+- id
+importIdentity(keypair: Keypair)
+- id
+getIdentityById(did: string)
+- did document
+
+Identity provider
+- createIdentifier
+- updateIdentifier
+- deleteIdentifier
+- addKey
+- removeKey
+- addService
+- removeService
+
+Did document struct
+- id
+- publicKeys
+- services
+- signature
+
+Verifiable credentials struct
+- @context
+- type
+- issuer
+- issuanceDate
+- credentialSubkect
+- proof
+
+
 ## DID:WEB
 ```
 {

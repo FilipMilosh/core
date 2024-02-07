@@ -9,6 +9,7 @@ const methodName = process.argv[2];
 //tsc && node dist/demo.js 1
 
 const id = 'vuki2';
+const did = 'did:cali:' + id;
 
 switch (methodName) {
   case '1':
@@ -28,7 +29,7 @@ switch (methodName) {
   }
   case '4': {
     const didDocument: DIDResolutionResult =
-      await identityManager.getIdentityById('did:cali' + id);
+      await identityManager.getIdentityById(did);
     console.log('didDocument', didDocument);
     break;
   }

@@ -9,6 +9,8 @@ import { VerifiableCredentialsMetadata } from './types.js';
 
 export class Veramo implements DidIdentifier {
   async getIdentifier(id: string): Promise<DIDResolutionResult> {
+    console.log('id', id);
+
     const didDocument: DIDResolutionResult = await agent.resolveDid({
       didUrl: id,
     });
@@ -45,6 +47,18 @@ export class Veramo implements DidIdentifier {
     return result.verified;
   }
 
+  async createIdentifier(id: string): Promise<string> {
+    //create identifier alias per node id
+    const identifier: IIdentifier = await agent.didManagerGetOrCreate({
+      alias: id,
+    });
+
+    console.log(`New identifier created`);
+    const json = JSON.stringify(identifier, null, 2);
+    console.log(json);
+    return json;
+  }
+
   async getIdentifiers(): Promise<string[]> {
     const identifiers = await agent.didManagerFind();
     console.log(`There are ${identifiers.length} identifiers`);
@@ -57,18 +71,5 @@ export class Veramo implements DidIdentifier {
       });
     }
     return identifiersList;
-  }
-
-  async createIdentifier(id: string): Promise<string> {
-    //create identifier alias per node id
-
-    const identifier: IIdentifier = await agent.didManagerGetOrCreate({
-      alias: id,
-    });
-
-    console.log(`New identifier created`);
-    const json = JSON.stringify(identifier, null, 2);
-    console.log(json);
-    return json;
   }
 }
