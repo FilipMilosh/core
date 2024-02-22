@@ -1,21 +1,31 @@
-use libp2p::core::PeerId;
-use std::collections::HashSet;
-use std::env;
+use libp2p::Multiaddr;
+use serde_derive::Deserialize;
+use std::error::Error;
+use std::path::Path;
 
-pub struct AppConfig {
-    pub allow_list: HashSet<PeerId>,
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub(crate) struct Config {
+    pub(crate) identity: Identity,
 }
 
-impl AppConfig {
-    pub fn new() -> Self {
-        let allow_list = match env::var("ALLOW_LIST") {
-            Ok(allow_list_str) => allow_list_str
-                .split(',')
-                .filter_map(|peer_id_str| PeerId::from_str(peer_id_str).ok())
-                .collect(),
-            Err(_) => HashSet::new(),
-        };
+impl Config {
+    pub(crate) fn from_file(path: &Path) -> Result<Self, Box<dyn Error>> {
+        Ok(serde_json::from_str(&std::fs::read_to_string(path)?)?)
+    }
+}
 
-        AppConfig { allow_list }
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub(crate) struct Identity {
+    #[serde(rename = "PeerID")]
+    pub(crate) peer_id: String,
+    pub(crate) priv_key: String,
+}
+
+impl zeroize::Zeroize for Config {
+    fn zeroize(&mut self) {
+        self.identity.peer_id.zeroize();
+        self.identity.priv_key.zeroize();
     }
 }

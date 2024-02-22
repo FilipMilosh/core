@@ -1,61 +1,127 @@
-use libp2p::{
-    identity,
-    mdns::{Mdns, Config},
-    SwarmBuilder,
-    PeerId,
-    swarm::Swarm,
-    Peerstore,
-};
-
+use clap::Parser;
+use futures::stream::StreamExt;
+use futures_timer::Delay;
+use libp2p::identity;
+use libp2p::identity::PeerId;
+use libp2p::kad;
+use libp2p::metrics::{Metrics, Recorder};
+use libp2p::swarm::SwarmEvent;
+use libp2p::tcp;
+use libp2p::{identify, noise, yamux};
 use std::error::Error;
-use std::collections::HashSet;
+use std::path::PathBuf;
+use std::str::FromStr;
+use std::task::Poll;
+use std::time::Duration;
+use tracing_subscriber::EnvFilter;
 
+mod behaviour;
 mod config;
 
-struct AllowListPeerstore {
-    allow_list: HashSet<PeerId>,
+const BOOTSTRAP_INTERVAL: Duration = Duration::from_secs(5 * 60);
+
+#[derive(Debug, Parser)]
+#[clap(name = "cali boot servers", about = "Bootstrap nodes for cali p2p network")]
+struct Opts {
+    // path to config file with private key, currently not used
+    #[clap(long)]
+    config: PathBuf,
+
+    #[clap(long)]
+    enable_kademlia: bool,
+
+    #[clap(long)]
+    enable_autonat: bool,
 }
 
-impl AllowListPeerstore {
-    fn new(allow_list: HashSet<PeerId>) -> Self {
-        AllowListPeerstore { allow_list }
-    }
-}
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .try_init();
 
-impl Peerstore for AllowListPeerstore {
-    fn add_peer(&mut self, peer_id: &PeerId) {
-        if !self.allow_list.contains(peer_id) {
-            return;
-        }
-        // Your custom logic to add the peer to the peer store
-    }
-}
+    let opt = Opts::parse();
 
-async fn run() -> Result<(), Box<dyn Error>> {
-    // Load configuration from environment variables
-    let app_config = config::AppConfig::new();
+    let local_keypair = {
+        let keypair = identity::Keypair::generate_ed25519();
+        let peer_id: PeerId = keypair.public().into();
 
-    // Create a random identity for the bootstrap node
-    let local_key = identity::Keypair::generate_ed25519();
-    let local_peer_id = PeerId::from(local_key.public());
+        keypair
+    };
 
-    // Create a Peerstore with the allow list
-    let peerstore = AllowListPeerstore::new(app_config.allow_list);
-
-    // Create a libp2p Swarm with mdns
-    let swarm = SwarmBuilder::new(Mdns::new(Config::default()).await?, local_peer_id, peerstore)
-        .executor(Box::new(|fut| {
-            tokio::spawn(fut);
-        }))
+    let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_keypair)
+        .with_tokio()
+        .with_tcp(
+            tcp::Config::default().port_reuse(true).nodelay(true),
+            noise::Config::new,
+            yamux::Config::default,
+        )?
+        .with_quic()
+        .with_dns()?
+        .with_websocket(noise::Config::new, yamux::Config::default)
+        .await?
+        .with_behaviour(|key| {
+            behaviour::Behaviour::new(key.public(), opt.enable_kademlia, opt.enable_autonat)
+        })?
         .build();
 
-    // Run the swarm
-    Swarm::run(swarm).await;
+    // boot node only
+    swarm.listen_on("/ip4/0.0.0.0/tcp/8000".parse().unwrap());
 
-    Ok(())
-}
+    let mut bootstrap_timer = Delay::new(BOOTSTRAP_INTERVAL);
 
-fn main() {
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    runtime.block_on(run()).unwrap();
+    loop {
+        if let Poll::Ready(()) = futures::poll!(&mut bootstrap_timer) {
+            bootstrap_timer.reset(BOOTSTRAP_INTERVAL);
+            let _ = swarm
+                .behaviour_mut()
+                .kademlia
+                .as_mut()
+                .map(|k| k.bootstrap());
+        }
+
+        let event = swarm.next().await.expect("Swarm not to terminate.");
+        match event {
+            SwarmEvent::Behaviour(behaviour::BehaviourEvent::Identify(e)) => {
+                tracing::info!("{:?}", e);
+
+                if let identify::Event::Received {
+                    peer_id,
+                    info:
+                        identify::Info {
+                            listen_addrs,
+                            protocols,
+                            ..
+                        },
+                } = e
+                {
+                    if protocols.iter().any(|p| *p == kad::PROTOCOL_NAME) {
+                        for addr in listen_addrs {
+                            swarm
+                                .behaviour_mut()
+                                .kademlia
+                                .as_mut()
+                                .map(|k| k.add_address(&peer_id, addr));
+                        }
+                    }
+                }
+            }
+            SwarmEvent::Behaviour(behaviour::BehaviourEvent::Ping(e)) => {
+                tracing::debug!("{:?}", e);
+            }
+            SwarmEvent::Behaviour(behaviour::BehaviourEvent::Kademlia(e)) => {
+                tracing::debug!("{:?}", e);
+            }
+            SwarmEvent::Behaviour(behaviour::BehaviourEvent::Relay(e)) => {
+                tracing::info!("{:?}", e);
+            }
+            SwarmEvent::Behaviour(behaviour::BehaviourEvent::Autonat(e)) => {
+                tracing::info!("{:?}", e);
+            }
+            SwarmEvent::NewListenAddr { address, .. } => {
+                tracing::info!(%address, "Listening on address");
+            }
+            _ => {}
+        }
+    }
 }
