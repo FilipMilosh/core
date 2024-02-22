@@ -10,8 +10,6 @@ use std::str::FromStr;
 use std::time::Duration;
 
 
-const IPFS_PROTO_NAME: StreamProtocol = StreamProtocol::new("/ipfs/kad/1.0.0");
-
 #[derive(NetworkBehaviour)]
 pub(crate) struct Behaviour {
     relay: relay::Behaviour,
@@ -28,7 +26,7 @@ impl Behaviour {
         enable_autonat: bool,
     ) -> Self {
         let kademlia = if enable_kademlia {
-            let mut kademlia_config = kad::Config::new(IPFS_PROTO_NAME);
+            let mut kademlia_config = kad::Config::default();
             kademlia_config.set_record_ttl(Some(Duration::from_secs(0)));
             kademlia_config.set_provider_record_ttl(Some(Duration::from_secs(0)));
             let mut kademlia = kad::Behaviour::with_config(
