@@ -4,9 +4,8 @@ use libp2p::kad;
 use libp2p::ping;
 use libp2p::relay;
 use libp2p::swarm::behaviour::toggle::Toggle;
-use libp2p::swarm::{NetworkBehaviour, StreamProtocol};
-use libp2p::{identity, Multiaddr, PeerId};
-use std::str::FromStr;
+use libp2p::swarm::NetworkBehaviour;
+use libp2p::{identity, PeerId};
 use std::time::Duration;
 
 
@@ -55,7 +54,7 @@ impl Behaviour {
             relay: relay::Behaviour::new(PeerId::from(pub_key.clone()), Default::default()),
             ping: ping::Behaviour::new(ping::Config::new()),
             identify: identify::Behaviour::new(
-                identify::Config::new("ipfs/0.1.0".to_string(), pub_key).with_agent_version(
+                identify::Config::new("cali-boot-server/0.1.0".to_string(), pub_key).with_agent_version(
                     format!("cali-boot-server/{}", env!("CARGO_PKG_VERSION")),
                 ),
             ),

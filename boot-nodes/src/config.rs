@@ -1,4 +1,3 @@
-use libp2p::Multiaddr;
 use serde_derive::Deserialize;
 use std::error::Error;
 use std::path::Path;
