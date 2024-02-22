@@ -2,28 +2,22 @@ use clap::Parser;
 use futures::stream::StreamExt;
 use futures_timer::Delay;
 use libp2p::identity;
-use libp2p::identity::PeerId;
 use libp2p::kad;
 use libp2p::swarm::SwarmEvent;
 use libp2p::tcp;
 use libp2p::{identify, noise, yamux};
 use std::error::Error;
-use std::path::PathBuf;
 use std::task::Poll;
 use std::time::Duration;
 use tracing_subscriber::EnvFilter;
 
 mod behaviour;
-mod config;
 
 const BOOTSTRAP_INTERVAL: Duration = Duration::from_secs(5 * 60);
 
 #[derive(Debug, Parser)]
 #[clap(name = "cali boot servers", about = "Bootstrap nodes for cali p2p network")]
 struct Opts {
-    // path to config file with private key, currently not used
-    #[clap(long)]
-    config: PathBuf,
 
     #[clap(long)]
     enable_kademlia: bool,
@@ -42,8 +36,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let local_keypair = {
         let keypair = identity::Keypair::generate_ed25519();
-        let peer_id: PeerId = keypair.public().into();
-
         keypair
     };
 
@@ -64,7 +56,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .build();
 
     // boot node only
-    swarm.listen_on("/ip4/0.0.0.0/tcp/8000".parse().unwrap());
+    let _ = swarm.listen_on("/ip4/0.0.0.0/tcp/8000".parse().unwrap());
 
     let mut bootstrap_timer = Delay::new(BOOTSTRAP_INTERVAL);
 
