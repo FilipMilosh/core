@@ -36,10 +36,6 @@ impl Behaviour {
                 kad::store::MemoryStore::new(pub_key.to_peer_id()),
                 kademlia_config,
             );
-            // let bootaddr = Multiaddr::from_str("/dnsaddr/bootstrap.libp2p.io").unwrap();
-            // for peer in &BOOTNODES {
-            //     kademlia.add_address(&PeerId::from_str(peer).unwrap(), bootaddr.clone());
-            // }
             kademlia.bootstrap().unwrap();
             Some(kademlia)
         } else {
