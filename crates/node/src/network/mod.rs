@@ -11,7 +11,7 @@ use libp2p::futures::prelude::*;
 use libp2p::multiaddr::{self, Multiaddr};
 use libp2p::swarm::behaviour::toggle::Toggle;
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
-use libp2p::{gossipsub, identify, kad, mdns, ping, relay, PeerId};
+use libp2p::{autonat, gossipsub, identify, kad, mdns, ping, relay, PeerId};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::io::AsyncBufReadExt;
@@ -31,6 +31,7 @@ const PROTOCOL_VERSION: &str = concat!("/", env!("CARGO_PKG_NAME"), "/", env!("C
 struct Behaviour {
     identify: identify::Behaviour,
     mdns: Toggle<mdns::tokio::Behaviour>,
+    autonat: autonat::Behaviour,
     kad: kad::Behaviour<kad::store::MemoryStore>,
     gossipsub: gossipsub::Behaviour,
     relay: relay::Behaviour,
@@ -101,7 +102,7 @@ pub async fn run(args: cli::RootArgs) -> eyre::Result<()> {
 
     let topic = client
         .subscribe(gossipsub::IdentTopic::new(
-            "/calimero/experimental/chat-p0c".to_owned(),
+            "/calimero/experimental-1/chat-p0c".to_owned(),
         ))
         .await?;
 
@@ -298,6 +299,13 @@ async fn init(
                 .then_some(())
                 .and_then(|_| mdns::Behaviour::new(mdns::Config::default(), peer_id).ok())
                 .into(),
+            autonat: autonat::Behaviour::new(
+                peer_id,
+                autonat::Config {
+                    only_global_ips: false,
+                    ..Default::default()
+                },
+            ),
             kad: {
                 let mut kad = kad::Behaviour::new(peer_id, kad::store::MemoryStore::new(peer_id));
                 kad.set_mode(Some(kad::Mode::Server));
