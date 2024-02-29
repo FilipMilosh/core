@@ -11,7 +11,7 @@ use libp2p::futures::prelude::*;
 use libp2p::multiaddr::{self, Multiaddr};
 use libp2p::swarm::behaviour::toggle::Toggle;
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
-use libp2p::{autonat, gossipsub, identify, kad, mdns, ping, relay, PeerId};
+use libp2p::{autonat, gossipsub, identify, kad, mdns, ping, relay, upnp, PeerId};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::io::AsyncBufReadExt;
@@ -32,6 +32,7 @@ struct Behaviour {
     identify: identify::Behaviour,
     mdns: Toggle<mdns::tokio::Behaviour>,
     autonat: autonat::Behaviour,
+    upnp: upnp::tokio::Behaviour,
     kad: kad::Behaviour<kad::store::MemoryStore>,
     gossipsub: gossipsub::Behaviour,
     relay: relay::Behaviour,
@@ -306,6 +307,7 @@ async fn init(
                     ..Default::default()
                 },
             ),
+            upnp: upnp::tokio::Behaviour::default(),
             kad: {
                 let mut kad = kad::Behaviour::new(peer_id, kad::store::MemoryStore::new(peer_id));
                 kad.set_mode(Some(kad::Mode::Server));

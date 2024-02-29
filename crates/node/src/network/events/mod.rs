@@ -7,6 +7,7 @@ mod kad;
 mod mdns;
 mod ping;
 mod relay;
+mod upnp;
 
 pub trait EventHandler<E> {
     async fn handle(&mut self, event: E);
@@ -19,10 +20,11 @@ impl EventLoop {
                 BehaviourEvent::Identify(event) => events::EventHandler::handle(self, event).await,
                 BehaviourEvent::Kad(event) => events::EventHandler::handle(self, event).await,
                 BehaviourEvent::Mdns(event) => events::EventHandler::handle(self, event).await,
-                BehaviourEvent::Autonat(event) => events::EventHandler::handle(self, event).await,
+                BehaviourEvent::Upnp(event) => events::EventHandler::handle(self, event).await,
                 BehaviourEvent::Gossipsub(event) => events::EventHandler::handle(self, event).await,
                 BehaviourEvent::Relay(event) => events::EventHandler::handle(self, event).await,
                 BehaviourEvent::Ping(event) => events::EventHandler::handle(self, event).await,
+                BehaviourEvent::Autonat(event) => events::EventHandler::handle(self, event).await,
             },
             SwarmEvent::NewListenAddr { address, .. } => {
                 let local_peer_id = *self.swarm.local_peer_id();
