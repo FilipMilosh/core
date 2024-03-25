@@ -1,5 +1,13 @@
+<<<<<<< HEAD
 use axum::{response::IntoResponse, routing::{get, post, put}, Json, Router};
 use rand::{thread_rng, RngCore};
+=======
+use axum::{response::IntoResponse, routing::{get, post}, Json, Router};
+use calimero_identity::did::DidDocument;
+use camino::Utf8Path;
+use rand::{thread_rng, RngCore};
+use serde_json::to_string_pretty;
+>>>>>>> 61cc682 (temp)
 use tower_sessions::{MemoryStore, Session, SessionManagerLayer};
 use base64::{engine::general_purpose::STANDARD, Engine};
 
@@ -37,6 +45,7 @@ fn generate_challenge() -> String {
     encoded
 }
 
+<<<<<<< HEAD
 async fn create_root_key() -> Json<&'static str> {
     Json("{\"status\":\"ok\"}")
 }
@@ -72,6 +81,33 @@ pub fn admin_router() -> Router {
     Router::new()
     .route("/health", get(health_check))
     .route("/node-key", put(add_root_pubkey))
+=======
+async fn create_root_key(session: Session, Json(req): Json<PubKeyRequest>) -> impl IntoResponse {
+    let pretty_json = to_string_pretty(&req).unwrap_or_else(|_| "Failed to serialize".into());
+
+    // Print the pretty JSON string
+    println!("Pretty printed JSON:\n{}", pretty_json);
+
+    // Retrieve the challenge from the session
+    if let Some(challenge) = session.get::<String>(CHALLENGE_KEY).await.unwrap_or(None) {
+        // TODO: Verify the challenge
+        // TODO: Verify the signature
+        let did = DidDocument::new(req.account_id.clone(), req.public_key.clone());
+        println!("Path: {:?}", did.to_json());
+        (StatusCode::OK, Json("{\"status\":\"Root key created\"}"))
+    } else {
+        // No challenge found in session
+        (StatusCode::BAD_REQUEST, Json("{\"status\":\"No challenge found\"}"))
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")] 
+struct PubKeyRequest {
+    account_id: String,
+    public_key: String,
+    signature: String,
+>>>>>>> 61cc682 (temp)
 }
 
 pub fn bootstrap_router() -> Router {
