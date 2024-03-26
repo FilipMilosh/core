@@ -1,9 +1,10 @@
 use std::net::{IpAddr, SocketAddr};
 
-use admin::bootstrap_router;
 use axum::http;
 use axum::routing::Router;
 use config::ServerConfig;
+use route::admin::admin_router;
+use route::bootstrap::bootstrap_router;
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tower_http::cors;
 use tower_http::services::{ServeDir, ServeFile};
@@ -15,8 +16,8 @@ pub mod graphql;
 mod middleware;
 #[cfg(feature = "websocket")]
 pub mod websocket;
-
-pub mod admin;
+mod route;
+pub mod verifysignature;
 
 type ServerSender = mpsc::Sender<(
     // todo! move to calimero-node-primitives
@@ -107,7 +108,7 @@ pub async fn start(
         react_app_serve_dir
     );
 
-    app = app.nest("/admin-api", bootstrap_router());
+    app = app.nest("/admin-api", admin_router());
 
     app = app
         .layer(

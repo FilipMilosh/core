@@ -10,6 +10,7 @@ license.workspace = true
 axum.workspace = true
 async-graphql = { workspace = true, optional = true }
 async-graphql-axum = { workspace = true, optional = true }
+borsh.workspace = true
 bs58.workspace = true
 camino.workspace = true
 eyre.workspace = true
@@ -32,6 +33,7 @@ tower-service = "0.3.2"
 tower-layer = "0.3.2"
 tower-sessions = "0.12.0"
 base64 = "0.22.0"
+near-crypto = "0.21.2"
 
 [[example]]
 name = "demo"

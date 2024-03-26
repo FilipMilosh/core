@@ -1,11 +1,12 @@
 use base64;
 use borsh::{BorshSerialize, BorshDeserialize};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use sha2::{Digest, Sha256};
 use near_crypto::{KeyType, PublicKey, Signature};
 use std::str::FromStr;
 
 #[derive(Default, BorshSerialize, BorshDeserialize)]
-struct Payload {
+pub struct Payload {
     message: String,
     nonce: Vec<u8>,
     recipient: String,
@@ -35,7 +36,7 @@ fn hash_bytes(bytes: &[u8]) -> [u8; 32] {
 }
 
 pub fn verify_signature(challenge: &str, message: &str, app: &str, curl: &str, signature_base64: &str, public_key_str: &str) -> bool {
-    let decoded_bytes = match base64::decode(&challenge) {
+    let decoded_bytes = match STANDARD.decode(&challenge) {
         Ok(bytes) => bytes,
         Err(err) => {
             eprintln!("Error decoding base64: {:?}", err);
@@ -51,7 +52,7 @@ pub fn verify_signature(challenge: &str, message: &str, app: &str, curl: &str, s
     
     let message_signed = hash_bytes(&borsh_payload);
 
-    let real_signature = match base64::decode(signature_base64) {
+    let real_signature = match STANDARD.decode(signature_base64) {
         Ok(bytes) => bytes,
         Err(err) => {
             eprintln!("Error decoding base64 signature: {:?}", err);
