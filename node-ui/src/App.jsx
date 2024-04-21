@@ -9,7 +9,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import UploadApp from "./pages/UploadApp";
 
 export default function App() {
-  console.log("test");
+  console.log("test1");
   return (
     <>
       <BrowserRouter basename="/admin">
